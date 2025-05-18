@@ -60,7 +60,6 @@ struct WasteRecord {
     int quantity;
     double cost;
 
-    // Тільки основний конструктор
     WasteRecord(
         std::string  companyCode,
         std::string  companyName,
@@ -83,14 +82,11 @@ struct WasteRecord {
         removalDate(std::move(removalDate)),
         quantity(quantity),
         cost(cost) {}
-
-    // Конструктор копіювання буде згенеровано компілятором автоматично і він нам підходить
 };
 
 struct WasteNode {
     WasteRecord data;
     WasteNode* next;
-    // Конструктор WasteNode тепер вимагає вже ініціалізований WasteRecord
     explicit WasteNode(WasteRecord record) : data(std::move(record)), next(nullptr) {}
 };
 
@@ -105,7 +101,7 @@ struct Queue {
 std::string getLineWithPrompt(const std::string& prompt);
 int getIntWithPrompt(const std::string& prompt, int minVal = std::numeric_limits<int>::min(), int maxVal = std::numeric_limits<int>::max());
 double getDoubleWithPrompt(const std::string& prompt, double minVal = -std::numeric_limits<double>::max(), double maxVal = std::numeric_limits<double>::max());
-char getYesNoInput(const std::string& prompt);
+bool getYesNoInput(const std::string& prompt);
 int inputPhysicalState(const std::string& prompt = "Введіть агрегатний стан");
 std::string inputDate(const std::string& promptMessage);
 void printSingleRecordDetails(const WasteRecord& record, int recordNumber = -1);
@@ -129,10 +125,10 @@ WasteRecord peek(const Queue& queue) {
     if (isEmpty(queue)) {
         throw std::out_of_range("Черга порожня");
     }
-    return queue.head->data; // Повертає копію
+    return queue.head->data;
 }
 
-void printSingleRecordDetails(const WasteRecord& record, int recordNumber) {
+void printSingleRecordDetails(const WasteRecord& record, const int recordNumber) {
     if (recordNumber != -1) {
          std::cout << "Запис #" << recordNumber << "\n";
     }
@@ -167,8 +163,6 @@ void printQueue(const Queue& queue) {
 }
 
 void enqueue(Queue& queue, const WasteRecord& record) {
-    // Створюємо новий вузол, передаючи record в конструктор WasteNode,
-    // який в свою чергу викличе конструктор копіювання WasteRecord
     WasteNode* newNode = new WasteNode(record);
 
     if (isEmpty(queue)) {
@@ -191,16 +185,16 @@ WasteRecord dequeue(Queue& queue) {
         throw std::out_of_range("Черга порожня");
     }
 
-    WasteNode* tempNode = queue.head; // Змінено ім'я змінної
-    WasteRecord removedData = tempNode->data; // Копіювання даних
+    const WasteNode* tempNode = queue.head;
+    WasteRecord removedData = tempNode->data;
     queue.head = tempNode->next;
 
     if (isEmpty(queue)) {
         queue.tail = nullptr;
     }
 
-    delete tempNode; // Видалення вузла
-    return removedData; // Повернення скопійованих даних
+    delete tempNode;
+    return removedData;
 }
 
 bool isLeapYear(const int year) {
@@ -220,14 +214,14 @@ bool isValidDate(const std::string& date) {
     const int year = std::stoi(match[3]);
 
     if (month < 1 || month > 12) return false;
-    if (year < 1900 || year > 2100) return false;
+    if (year < 1900 || year > 2025) return false;
 
-    int daysInMonth[] = { 0, 31,28,31,30,31,30,31,31,30,31,30,31 };
+    int daysInMonth[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
     if (isLeapYear(year)) {
-        daysInMonth[2] = 29;
+        daysInMonth[1] = 29;
     }
 
-    return day >= 1 && day <= daysInMonth[month];
+    return day >= 1 && day <= daysInMonth[month - 1];
 }
 
 std::string convertDateToComparableFormat(const std::string& date_ddmmyyyy) {
@@ -245,58 +239,56 @@ std::string getLineWithPrompt(const std::string& prompt) {
     return input;
 }
 
-int getIntWithPrompt(const std::string& prompt, int minVal, int maxVal) {
-    int value;
+int getIntWithPrompt(const std::string& prompt, const int minVal, const int maxVal) {
     std::string line;
     while (true) {
         std::cout << prompt;
         std::getline(std::cin, line);
         try {
-            value = std::stoi(line);
+            int value = std::stoi(line);
             if (value >= minVal && value <= maxVal) {
                 return value;
             }
             std::cout << "Значення має бути в діапазоні [" << minVal << ", " << maxVal << "]. Спробуйте ще раз.\n";
-        } catch (const std::invalid_argument& e) {
+        } catch (const std::invalid_argument&) {
             std::cout << "Некоректний ввід. Введіть ціле число.\n";
-        } catch (const std::out_of_range& e) {
+        } catch (const std::out_of_range&) {
             std::cout << "Число занадто велике або занадто мале. Спробуйте ще раз.\n";
         }
     }
 }
 
-double getDoubleWithPrompt(const std::string& prompt, double minVal, double maxVal) {
-    double value;
+double getDoubleWithPrompt(const std::string& prompt, const double minVal, const double maxVal) {
     std::string line;
     while (true) {
         std::cout << prompt;
         std::getline(std::cin, line);
         try {
-            value = std::stod(line);
+            double value = std::stod(line);
              if (value >= minVal && value <= maxVal) {
                 return value;
-            }
+             }
             std::cout << "Значення має бути в діапазоні [" << minVal << ", " << maxVal << "]. Спробуйте ще раз.\n";
-        } catch (const std::invalid_argument& e) {
+        } catch (const std::invalid_argument&) {
             std::cout << "Некоректний ввід. Введіть число (можливо, з десятковою крапкою).\n";
-        } catch (const std::out_of_range& e) {
+        } catch (const std::out_of_range&) {
             std::cout << "Число занадто велике або занадто мале. Спробуйте ще раз.\n";
         }
     }
 }
 
 
-char getYesNoInput(const std::string& prompt) {
+bool getYesNoInput(const std::string& prompt) {
     std::string input;
-    char choice;
     while (true) {
         std::cout << prompt << " (Y/N): ";
         std::getline(std::cin, input);
         if (input.length() == 1) {
-            choice = toupper(input[0]);
-            if (choice == 'Y' || choice == 'N') {
-                return choice;
+            char choice = toupper(input[0]);
+            if (choice == 'Y') {
+                return true;
             }
+            return false;
         }
         std::cout << "Некоректний ввід. Будь ласка, введіть Y або N.\n";
     }
@@ -306,9 +298,9 @@ int inputPhysicalState(const std::string& prompt) {
     int state;
     std::string line;
     do {
-        std::cout << prompt <<" (1 = " +
-            getPhysicalStateString(PhysicalState::Solid) + ", 2 = "
-        + getPhysicalStateString(PhysicalState::Liquid) + ", 3 = "
+        std::cout << prompt <<" (" << static_cast<int>(PhysicalState::Solid) << " = " +
+            getPhysicalStateString(PhysicalState::Solid) + ", " << static_cast<int>(PhysicalState::Liquid) << " = "
+        + getPhysicalStateString(PhysicalState::Liquid) + ", " << static_cast<int>(PhysicalState::Gas) << " = "
         + getPhysicalStateString(PhysicalState::Gas) + "): ";
         std::getline(std::cin, line);
         try {
@@ -324,6 +316,7 @@ int inputPhysicalState(const std::string& prompt) {
             state = 0;
         }
     } while (!isValidPhysicalState(state));
+
     return state;
 }
 
@@ -336,24 +329,23 @@ std::string inputDate(const std::string& promptMessage) {
             std::cout << "Некоректна дата або формат. Спробуйте ще раз.\n";
         }
     } while (!isValidDate(date));
+
     return date;
 }
 
 WasteRecord inputWasteRecord() {
-    // Збираємо дані в локальні змінні
-    std::string companyCode = getLineWithPrompt("Введіть код підприємства: ");
-    std::string companyName = getLineWithPrompt("Введіть назву підприємства: ");
-    std::string address = getLineWithPrompt("Введіть адресу: ");
-    std::string phone = getLineWithPrompt("Введіть номер телефону: ");
-    std::string wasteCode = getLineWithPrompt("Введіть код відходу: ");
-    std::string wasteName = getLineWithPrompt("Введіть назву відходу: ");
+    const std::string companyCode = getLineWithPrompt("Введіть код підприємства: ");
+    const std::string companyName = getLineWithPrompt("Введіть назву підприємства: ");
+    const std::string address = getLineWithPrompt("Введіть адресу: ");
+    const std::string phone = getLineWithPrompt("Введіть номер телефону: ");
+    const std::string wasteCode = getLineWithPrompt("Введіть код відходу: ");
+    const std::string wasteName = getLineWithPrompt("Введіть назву відходу: ");
 
-    PhysicalState state = static_cast<PhysicalState>(inputPhysicalState());
-    std::string removalDate = inputDate("Введіть дату вивезення");
-    int quantity = getIntWithPrompt("Введіть кількість: ", 1);
-    double cost = getDoubleWithPrompt("Введіть вартість: ", 0.01);
+    const PhysicalState state = static_cast<PhysicalState>(inputPhysicalState());
+    const std::string removalDate = inputDate("Введіть дату вивезення");
+    const int quantity = getIntWithPrompt("Введіть кількість: ", 1);
+    const double cost = getDoubleWithPrompt("Введіть вартість: ", 0.01);
 
-    // Створюємо об'єкт WasteRecord за допомогою основного конструктора
     return WasteRecord(companyCode, companyName, address, phone, wasteCode, wasteName,
                        state, removalDate, quantity, cost);
 }
@@ -363,8 +355,9 @@ void printCompaniesByWasteTypeAndDate(const Queue& queue) {
         std::cout << "Черга порожня. Немає даних для пошуку.\n";
         return;
     }
-    std::string targetWasteName = getLineWithPrompt("Введіть назву виду відходу для пошуку: ");
-    std::string targetDate = inputDate("Введіть дату вивезення для пошуку");
+
+    const std::string targetWasteName = getLineWithPrompt("Введіть назву виду відходу для пошуку: ");
+    const std::string targetDate = inputDate("Введіть дату вивезення для пошуку");
 
     std::set<std::string> foundCompanies;
     const WasteNode* current = queue.head;
@@ -374,13 +367,14 @@ void printCompaniesByWasteTypeAndDate(const Queue& queue) {
         }
         current = current->next;
     }
+
     if (foundCompanies.empty()) {
         std::cout << "Не знайдено підприємств, які вивозили '" << targetWasteName
                   << "' на дату " << targetDate << ".\n";
     } else {
         std::cout << "\nСписок підприємств, які вивозили '" << targetWasteName
                   << "' на дату " << targetDate << ":\n";
-        for (const auto& companyName : foundCompanies) {
+        for (const std::string& companyName : foundCompanies) {
             std::cout << "- " << companyName << std::endl;
         }
     }
@@ -391,8 +385,9 @@ void calculateServiceCostByWasteTypeAndCompany(const Queue& queue) {
         std::cout << "Черга порожня. Немає даних для розрахунку.\n";
         return;
     }
-    std::string targetCompanyName = getLineWithPrompt("Введіть назву підприємства для розрахунку вартості: ");
-    std::string targetWasteName = getLineWithPrompt("Введіть назву виду відходу: ");
+
+    const std::string targetCompanyName = getLineWithPrompt("Введіть назву підприємства для розрахунку вартості: ");
+    const std::string targetWasteName = getLineWithPrompt("Введіть назву виду відходу: ");
 
     double totalCost = 0.0;
     bool foundRecords = false;
@@ -404,6 +399,7 @@ void calculateServiceCostByWasteTypeAndCompany(const Queue& queue) {
         }
         current = current->next;
     }
+
     std::cout << std::fixed << std::setprecision(2);
     if (foundRecords) {
         std::cout << "Загальна вартість вивезення відходу '" << targetWasteName
@@ -420,10 +416,10 @@ void findCompaniesByPhysicalState(const Queue& queue) {
         std::cout << "Черга порожня. Немає даних для пошуку.\n";
         return;
     }
+
     std::cout << "Пошук підприємств за агрегатним станом відходів.\n";
-    int stateInt = inputPhysicalState();
-    PhysicalState targetState = static_cast<PhysicalState>(stateInt);
-    std::string targetStateStr = getPhysicalStateString(targetState);
+    const PhysicalState targetState = static_cast<PhysicalState>(inputPhysicalState());
+    const std::string targetStateStr = getPhysicalStateString(targetState);
 
     std::set<std::string> foundCompanies;
     const WasteNode* current = queue.head;
@@ -433,16 +429,18 @@ void findCompaniesByPhysicalState(const Queue& queue) {
         }
         current = current->next;
     }
+
      if (foundCompanies.empty()) {
         std::cout << "Не знайдено підприємств, які вивозять відходи в агрегатному стані: '"
                   << targetStateStr << "'.\n";
-    } else {
-        std::cout << "\nСписок підприємств, які вивозять відходи в агрегатному стані '"
-                  << targetStateStr << "':\n";
-        for (const auto& companyName : foundCompanies) {
-            std::cout << "- " << companyName << std::endl;
-        }
-    }
+     } else {
+         std::cout << "\nСписок підприємств, які вивозять відходи в агрегатному стані '"
+                   << targetStateStr << "':\n";
+
+         for (const std::string& companyName : foundCompanies) {
+             std::cout << "- " << companyName << std::endl;
+         }
+     }
 }
 
 void calculateWasteCountByCompanyAndDateRange(const Queue& queue) {
@@ -450,16 +448,17 @@ void calculateWasteCountByCompanyAndDateRange(const Queue& queue) {
         std::cout << "Черга порожня. Немає даних для розрахунку.\n";
         return;
     }
-    std::string targetCompanyName = getLineWithPrompt("Введіть назву підприємства для розрахунку кількості відходів: ");
-    std::string startDateStr = inputDate("Введіть початкову дату діапазону");
-    std::string endDateStr = inputDate("Введіть кінцеву дату діапазону");
+
+    const std::string targetCompanyName = getLineWithPrompt("Введіть назву підприємства для розрахунку кількості відходів: ");
+    const std::string startDateStr = inputDate("Введіть початкову дату діапазону");
+    const std::string endDateStr = inputDate("Введіть кінцеву дату діапазону");
 
     std::string comparableStartDate, comparableEndDate;
     try {
         comparableStartDate = convertDateToComparableFormat(startDateStr);
         comparableEndDate = convertDateToComparableFormat(endDateStr);
-    } catch (const std::invalid_argument& e) {
-        std::cout << "Помилка: " << e.what() << std::endl;
+    } catch (const std::invalid_argument& ex) {
+        std::cout << "Помилка: " << ex.what() << std::endl;
         return;
     }
 
@@ -476,9 +475,9 @@ void calculateWasteCountByCompanyAndDateRange(const Queue& queue) {
     while (current != nullptr) {
         if (current->data.companyName == targetCompanyName) {
             std::string recordDateComparable;
-             try {
+            try {
                 recordDateComparable = convertDateToComparableFormat(current->data.removalDate);
-            } catch (const std::invalid_argument& e) {
+            } catch (const std::invalid_argument&) {
                 std::cerr << "Попередження: некоректна дата в записі для '" << current->data.companyName << "': " << current->data.removalDate << ". Запис пропущено.\n";
                 current = current->next;
                 continue;
@@ -504,23 +503,24 @@ void calculateWasteCountByCompanyAndDateRange(const Queue& queue) {
 
 void sortQueueByQuantityThenCost(Queue& queue) {
     if (isEmpty(queue) || queue.head->next == nullptr) {
-        std::cout << "Черга порожня або містить лише один елемент. Сортування не потрібне.\n";
         return;
     }
+
     std::vector<WasteRecord> records;
     while (!isEmpty(queue)) {
         records.push_back(dequeue(queue));
     }
-    std::sort(records.begin(), records.end(), [](const WasteRecord& a, const WasteRecord& b) {
-        if (a.quantity != b.quantity) {
-            return a.quantity < b.quantity;
+
+    std::sort(records.begin(), records.end(), [](const WasteRecord& left, const WasteRecord& right) {
+        if (left.quantity != right.quantity) {
+            return left.quantity < right.quantity;
         }
-        return a.cost < b.cost;
+        return left.cost < right.cost;
     });
-    for (const auto& record : records) {
+
+    for (const WasteRecord& record : records) {
         enqueue(queue, record);
     }
-    std::cout << "Чергу відсортовано за кількістю, а потім за вартістю послуги (за зростанням).\n";
 }
 
 void updateRecord(Queue& queue) {
@@ -560,7 +560,6 @@ void updateRecord(Queue& queue) {
 
     WasteNode* nodeToUpdate = matchingNodes[choice - 1];
 
-    // Створюємо копію поточних даних для редагування
     std::string companyCode = nodeToUpdate->data.companyCode;
     std::string companyName = nodeToUpdate->data.companyName;
     std::string address = nodeToUpdate->data.address;
@@ -578,34 +577,34 @@ void updateRecord(Queue& queue) {
 
     std::cout << "\nВведіть нові дані (натисніть Enter, щоб не змінювати):\n";
 
-    if (getYesNoInput("Змінити код підприємства (" + companyCode + ")?") == 'Y') {
+    if (getYesNoInput("Змінити код підприємства (" + companyCode + ")?")) {
         companyCode = getLineWithPrompt("Новий код підприємства: ");
     }
-    if (getYesNoInput("Змінити назву підприємства (" + companyName + ")?") == 'Y') {
+    if (getYesNoInput("Змінити назву підприємства (" + companyName + ")?")) {
         companyName = getLineWithPrompt("Нова назва підприємства: ");
     }
-    if (getYesNoInput("Змінити адресу (" + address + ")?") == 'Y') {
+    if (getYesNoInput("Змінити адресу (" + address + ")?")) {
         address = getLineWithPrompt("Нова адреса: ");
     }
-    if (getYesNoInput("Змінити телефон (" + phone + ")?") == 'Y') {
+    if (getYesNoInput("Змінити телефон (" + phone + ")?")) {
         phone = getLineWithPrompt("Новий телефон: ");
     }
-    if (getYesNoInput("Змінити код відходу (" + wasteCode + ")?") == 'Y') {
+    if (getYesNoInput("Змінити код відходу (" + wasteCode + ")?")) {
         wasteCode = getLineWithPrompt("Новий код відходу: ");
     }
-    if (getYesNoInput("Змінити назву відходу (" + wasteName + ")?") == 'Y') {
+    if (getYesNoInput("Змінити назву відходу (" + wasteName + ")?")) {
         wasteName = getLineWithPrompt("Нова назва відходу: ");
     }
-    if (getYesNoInput("Змінити агрегатний стан (" + getPhysicalStateString(state) + ")?") == 'Y') {
+    if (getYesNoInput("Змінити агрегатний стан (" + getPhysicalStateString(state) + ")?")) {
         state = static_cast<PhysicalState>(inputPhysicalState("Новий агрегатний стан"));
     }
-    if (getYesNoInput("Змінити дату вивезення (" + removalDate + ")?") == 'Y') {
+    if (getYesNoInput("Змінити дату вивезення (" + removalDate + ")?")) {
         removalDate = inputDate("Нова дата вивезення");
     }
-    if (getYesNoInput("Змінити кількість (" + std::to_string(quantity) + ")?") == 'Y') {
+    if (getYesNoInput("Змінити кількість (" + std::to_string(quantity) + ")?")) {
         quantity = getIntWithPrompt("Нова кількість: ", 1);
     }
-    if (getYesNoInput("Змінити вартість (" + std::to_string(cost) + ")?") == 'Y') {
+    if (getYesNoInput("Змінити вартість (" + std::to_string(cost) + ")?")) {
         cost = getDoubleWithPrompt("Нова вартість: ", 0.01);
     }
 
@@ -614,8 +613,7 @@ void updateRecord(Queue& queue) {
     WasteRecord tempPrintRecord(companyCode, companyName, address, phone, wasteCode, wasteName, state, removalDate, quantity, cost);
     printSingleRecordDetails(tempPrintRecord, -1);
 
-
-    if (getYesNoInput("Зберегти ці зміни?") == 'Y') {
+    if (getYesNoInput("Зберегти ці зміни?")) {
         // Оновлюємо дані в вузлі черги, створюючи новий WasteRecord
         nodeToUpdate->data = WasteRecord(companyCode, companyName, address, phone, wasteCode, wasteName,
                                         state, removalDate, quantity, cost);
@@ -624,7 +622,6 @@ void updateRecord(Queue& queue) {
         std::cout << "Зміни скасовано.\n";
     }
 }
-
 
 const std::string DEFAULT_FILENAME = "waste_data.txt";
 const std::string RECORD_SEPARATOR = "---END_RECORD---";
@@ -725,15 +722,15 @@ void loadQueueFromFile(Queue& queue, const std::string& filename) {
                     break;
             }
             fieldCounter++;
-        } catch (const std::invalid_argument& e) {
-            std::cerr << "Помилка парсингу (рядок " << recordLineNumber << ", поле " << fieldCounter << ", значення '" << line << "'): " << e.what() << ". Запис буде пропущено.\n";
+        } catch (const std::invalid_argument& ex) {
+            std::cerr << "Помилка парсингу (рядок " << recordLineNumber << ", поле " << fieldCounter << ", значення '" << line << "'): " << ex.what() << ". Запис буде пропущено.\n";
             while(std::getline(inFile, line) && line != RECORD_SEPARATOR) {recordLineNumber++;} // Пропустити до кінця поточного запису
             fieldCounter = 0;
             companyCode.clear(); companyName.clear(); address.clear(); phone.clear();
             wasteCode.clear(); wasteName.clear(); removalDateStr.clear();
             stateInt = 0; quantity = 0; cost = 0.0; state = PhysicalState::Solid;
-        } catch (const std::out_of_range& e) {
-            std::cerr << "Помилка діапазону (рядок " << recordLineNumber << ", поле " << fieldCounter << ", значення '" << line << "'): " << e.what() << ". Запис буде пропущено.\n";
+        } catch (const std::out_of_range& ex) {
+            std::cerr << "Помилка діапазону (рядок " << recordLineNumber << ", поле " << fieldCounter << ", значення '" << line << "'): " << ex.what() << ". Запис буде пропущено.\n";
             while(std::getline(inFile, line) && line != RECORD_SEPARATOR) {recordLineNumber++;}
             fieldCounter = 0;
             companyCode.clear(); companyName.clear(); address.clear(); phone.clear();
@@ -775,10 +772,10 @@ void menu(Queue& queue) {
 
         try {
             inputChoice = std::stoi(line);
-        } catch (const std::invalid_argument& e) {
+        } catch (const std::invalid_argument&) {
             std::cout << "Неправильний ввід. Будь ласка, введіть число.\n";
             continue;
-        } catch (const std::out_of_range& e) {
+        } catch (const std::out_of_range&) {
             std::cout << "Вибір поза допустимим діапазоном.\n";
             continue;
         }
@@ -786,8 +783,6 @@ void menu(Queue& queue) {
         switch (static_cast<MenuChoice>(inputChoice)) {
         case MenuChoice::ADD_RECORD: {
             std::cout << "--- Додавання нового запису --- \n";
-            // enqueue приймає const WasteRecord&, тому inputWasteRecord() створить тимчасовий об'єкт,
-            // який буде скопійовано
             enqueue(queue, inputWasteRecord());
             std::cout << "Запис додано до черги!\n";
             break;
@@ -822,7 +817,7 @@ void menu(Queue& queue) {
             break;
         }
         case MenuChoice::CLEAR_QUEUE: {
-            if (getYesNoInput("Ви впевнені, що хочете очистити ВСЮ чергу?") == 'Y') {
+            if (getYesNoInput("Ви впевнені, що хочете очистити ВСЮ чергу?")) {
                 clearQueue(queue);
                 std::cout << "Чергу очищено.\n";
             } else {
@@ -848,6 +843,7 @@ void menu(Queue& queue) {
         }
         case MenuChoice::SORT_BY_COUNT_THEN_PRICE: {
             sortQueueByQuantityThenCost(queue);
+            std::cout << "Чергу відсортовано за кількістю, а потім за вартістю послуги (за зростанням).\n";
             break;
         }
         case MenuChoice::SAVE_TO_FILE: {
@@ -860,7 +856,7 @@ void menu(Queue& queue) {
         }
         case MenuChoice::LOAD_FROM_FILE: {
              if (!isEmpty(queue)) {
-                if (getYesNoInput("Поточна черга не порожня. Завантаження перезапише її. Продовжити?") == 'N') {
+                if (!getYesNoInput("Поточна черга не порожня. Завантаження перезапише її. Продовжити?")) {
                     std::cout << "Завантаження скасовано.\n";
                     break;
                 }
@@ -873,8 +869,8 @@ void menu(Queue& queue) {
             break;
         }
         case MenuChoice::EXIT: {
-            if (getYesNoInput("Зберегти зміни перед виходом?") == 'Y') {
-                 std::string filename = getLineWithPrompt("Введіть ім'я файлу для збереження (натисніть Enter для " + DEFAULT_FILENAME + "): ");
+            if (getYesNoInput("Зберегти зміни перед виходом?")) {
+                std::string filename = getLineWithPrompt("Введіть ім'я файлу для збереження (натисніть Enter для " + DEFAULT_FILENAME + "): ");
                 if (filename.empty()) {
                     filename = DEFAULT_FILENAME;
                 }
