@@ -10,6 +10,11 @@
 #include <limits>
 #include <fstream>
 
+enum class SortingDirection {
+    ASC = 1,
+    DESC = 2
+};
+
 enum class PhysicalState {
     Solid = 1,
     Liquid = 2,
@@ -320,6 +325,44 @@ int inputPhysicalState(const std::string& prompt) {
     return state;
 }
 
+std::string getSortingDirectionString(const SortingDirection direction) {
+    switch (direction) {
+        case SortingDirection::ASC: return "За зростанням";
+        case SortingDirection::DESC: return "За спаданням";
+        default: throw std::invalid_argument("Такого напрямку сортування не існує.");
+    }
+}
+
+bool isValidSortingDirection(int sortingDirection) {
+    return sortingDirection == static_cast<int>(SortingDirection::ASC) ||
+        sortingDirection == static_cast<int>(SortingDirection::DESC);
+}
+
+SortingDirection inputSoringDirection(const std::string& prompt) {
+    int sortingDirection;
+    std::string line;
+    do {
+        std::cout << prompt <<" (" << static_cast<int>(SortingDirection::ASC) << " = " +
+            getSortingDirectionString(SortingDirection::ASC) + ", " << static_cast<int>(SortingDirection::DESC) << " = "
+        + getSortingDirectionString(SortingDirection::DESC) + ")\nВведіть напрямок: ";
+        std::getline(std::cin, line);
+        try {
+            sortingDirection = std::stoi(line);
+            if (!isValidSortingDirection(sortingDirection)) {
+                std::cout << "Некоректний напрямок. Спробуйте ще раз.\n";
+            }
+        } catch (const std::invalid_argument& e) {
+            std::cout << "Некоректний ввід. Введіть число.\n";
+            sortingDirection = 0;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Число занадто велике. Спробуйте ще раз.\n";
+            sortingDirection = 0;
+        }
+    } while (!isValidSortingDirection(sortingDirection));
+
+    return static_cast<SortingDirection>(sortingDirection);
+}
+
 std::string inputDate(const std::string& promptMessage) {
     std::string date;
     do {
@@ -501,7 +544,7 @@ void calculateWasteCountByCompanyAndDateRange(const Queue& queue) {
     }
 }
 
-void sortQueueByQuantityThenCost(Queue& queue) {
+void sortQueueByQuantityThenCost(Queue& queue, SortingDirection sortingDirection) {
     if (isEmpty(queue) || queue.head->next == nullptr) {
         return;
     }
@@ -511,11 +554,20 @@ void sortQueueByQuantityThenCost(Queue& queue) {
         records.push_back(dequeue(queue));
     }
 
-    std::sort(records.begin(), records.end(), [](const WasteRecord& left, const WasteRecord& right) {
+    std::sort(records.begin(), records.end(), [sortingDirection](const WasteRecord& left, const WasteRecord& right) {
         if (left.quantity != right.quantity) {
-            return left.quantity < right.quantity;
+            if (sortingDirection == SortingDirection::ASC) {
+                return left.quantity < right.quantity;
+            }
+
+            return left.quantity > right.quantity;
         }
-        return left.cost < right.cost;
+
+        if (sortingDirection == SortingDirection::ASC) {
+            return left.cost < right.cost;
+        }
+
+        return left.cost > right.cost;
     });
 
     for (const WasteRecord& record : records) {
@@ -746,7 +798,6 @@ void loadQueueFromFile(Queue& queue, const std::string& filename) {
     std::cout << "Дані успішно завантажено з файлу: " << filename << std::endl;
 }
 
-
 void menu(Queue& queue) {
     while (true) {
         std::cout << "\n===== МЕНЮ =====\n"
@@ -842,8 +893,9 @@ void menu(Queue& queue) {
             break;
         }
         case MenuChoice::SORT_BY_COUNT_THEN_PRICE: {
-            sortQueueByQuantityThenCost(queue);
-            std::cout << "Чергу відсортовано за кількістю, а потім за вартістю послуги (за зростанням).\n";
+            SortingDirection sortingDirection = inputSoringDirection("Введіть напрямок сортування.");
+            sortQueueByQuantityThenCost(queue, sortingDirection);
+            std::cout << "Чергу відсортовано за кількістю, а потім за вартістю послуги.\n";
             break;
         }
         case MenuChoice::SAVE_TO_FILE: {
